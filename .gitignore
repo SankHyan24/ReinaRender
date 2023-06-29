@@ -1,4 +1,4 @@
-.vs/
+# runtime files
 .vscode/
 build/*
-# thirdparty/*
+*.ini
