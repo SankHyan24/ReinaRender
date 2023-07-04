@@ -1,6 +1,9 @@
 #pragma once
-class Medium
+namespace reina
 {
-public:
-    virtual ~Medium() {}
-};
+    class Medium
+    {
+    public:
+        virtual ~Medium() {}
+    };
+}

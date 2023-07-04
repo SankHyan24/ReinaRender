@@ -5,8 +5,8 @@
  */
 #include <reina.hpp>
 #include <utils/vecmath.hpp>
-#include <utils/float.hpp>
 #include <core/medium.hpp>
+
 namespace reina
 {
     class Ray
@@ -18,8 +18,8 @@ namespace reina
             const Medium *medium = nullptr)
             : o(o), d(d), tMax(tMax), time(time), medium(medium) {}
 
-        Point3f operator()(Float t) const { return o + d * t; }
-        bool HasNaNs() const { return (o.HasNaNs() || d.HasNaNs() || isNaN(tMax)); }
+        Point3f operator()(Float t) const { return Point3f(o + d * t); }
+        bool HasNaNs() const { return (o.HasNaNs() || d.HasNaNs() || std::isnan(tMax)); }
         friend std::ostream &operator<<(std::ostream &os, const Ray &r)
         {
             os << "[o=" << r.o << ", d=" << r.d << ", tMax=" << r.tMax

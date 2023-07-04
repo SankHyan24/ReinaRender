@@ -16,8 +16,8 @@
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
-#include <reina.hpp>
 #include <utils/vecmath.hpp>
+#include <core/ray.hpp>
 int TmpMain()
 {
     // Setup SDL
@@ -201,6 +201,9 @@ int main(int argc, char **argv)
     // TmpMain();
     using namespace reina;
     Vector3i a(1, 2, 3);
-    std::cout << a << std::endl;
+    Ray ray;
+    std::cout << ray << Lerp(1.1, 1.0, 1.4) << std::endl;
+    Bounds3f b;
+    std::cout << b.Diagonal() << std::endl;
     return 0;
 }

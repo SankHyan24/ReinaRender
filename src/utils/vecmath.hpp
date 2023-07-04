@@ -1,35 +1,14 @@
 #pragma once
 #include <ostream>
 #include <cassert>
+#include <string>
 
 #include <reina.hpp>
+#include <utils/math.hpp>
+#include <utils/float.hpp>
 
 namespace reina
 {
-    // Forward declarations
-    // Class:
-    //    Point Vector Normal Ray
-    template <typename T>
-    class Vector3;
-    template <typename T>
-    class Point3;
-    template <typename T>
-    class Point2;
-    template <typename T>
-    class Vector2;
-    template <typename T>
-    class Normal3;
-
-    typedef Point2<Float> Point2f;
-    typedef Point2<int> Point2i;
-    typedef Point3<Float> Point3f;
-    typedef Point3<int> Point3i;
-
-    typedef Vector2<Float> Vector2f;
-    typedef Vector2<int> Vector2i;
-    typedef Vector3<Float> Vector3f;
-    typedef Vector3<int> Vector3i;
-
     template <typename T>
     class Point2
     {
@@ -527,11 +506,6 @@ namespace reina
             return x * v.x + y * v.y + z * v.z;
         }
 
-        T Dot(const Vector3<T> &n) const
-        {
-            return x * n.x + y * n.y + z * n.z;
-        }
-
         // Cross
         Vector3<T> Cross(const Vector3<T> &v) const
         {
@@ -539,12 +513,10 @@ namespace reina
                               x * v.y - y * v.x);
         }
 
-        Vector3<T> Cross(const Vector3<T> &n) const
+        std::string ToString() const
         {
-            return Vector3<T>(y * n.z - z * n.y, z * n.x - x * n.z,
-                              x * n.y - y * n.x);
+            return std::string("[ " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + " ]");
         }
-
         // Vector3 Public Data
         T x, y, z;
     };
@@ -775,4 +747,246 @@ namespace reina
     {
         return (n.Dot(v) < 0.f) ? -n : n;
     }
+
+    class Quaternion
+    {
+    public:
+        // Quaternion Public Methods
+        Quaternion() = default;
+        Quaternion &operator+=(Quaternion q)
+        {
+            v += q.v;
+            w += q.w;
+            return *this;
+        }
+
+        Quaternion operator+(Quaternion q) const { return {v + q.v, w + q.w}; }
+        Quaternion &operator-=(Quaternion q)
+        {
+            v -= q.v;
+            w -= q.w;
+            return *this;
+        }
+        Quaternion operator-() const { return {-v, -w}; }
+        Quaternion operator-(Quaternion q) const { return {v - q.v, w - q.w}; }
+        Quaternion &operator*=(Float f)
+        {
+            v *= f;
+            w *= f;
+            return *this;
+        }
+        Quaternion operator*(Float f) const { return {v * f, w * f}; }
+        Quaternion &operator/=(Float f)
+        {
+            assert(f != 0);
+            v /= f;
+            w /= f;
+            return *this;
+        }
+        Quaternion operator/(Float f) const
+        {
+            assert(f != 0);
+            return {v / f, w / f};
+        }
+
+        std::string ToString() const
+        {
+            return "Quaternion: " + v.ToString() + " " + std::to_string(w);
+        }
+
+        // Quaternion Public Members
+        Vector3f v;
+        Float w = 1;
+    };
+
+    template <typename T>
+    class Bounds2
+    {
+    public:
+        // Bounds2 Public Methods
+        Bounds2()
+        {
+            T minNum = std::numeric_limits<T>::lowest();
+            T maxNum = std::numeric_limits<T>::max();
+            pMin = Point2<T>(maxNum, maxNum);
+            pMax = Point2<T>(minNum, minNum);
+        }
+        Bounds2(const Point2<T> &p) : pMin(p), pMax(p) {}
+        Bounds2(const Point2<T> &p1, const Point2<T> &p2)
+        {
+            pMin = Point2<T>(std::min(p1.x, p2.x), std::min(p1.y, p2.y));
+            pMax = Point2<T>(std::max(p1.x, p2.x), std::max(p1.y, p2.y));
+        }
+        template <typename U>
+        explicit operator Bounds2<U>() const
+        {
+            return Bounds2<U>((Point2<U>)pMin, (Point2<U>)pMax);
+        }
+
+        Vector2<T> Diagonal() const
+        {
+            return pMax - pMin;
+        }
+        T Area() const
+        {
+            Vector2<T> d = pMax - pMin;
+            return (d.x * d.y);
+        }
+        int MaximumExtent() const
+        {
+            Vector2<T> diag = Diagonal();
+            if (diag.x > diag.y)
+                return 0;
+            else
+                return 1;
+        }
+        inline const Point2<T> &operator[](int i) const
+        {
+            assert(i == 0 || i == 1);
+            return (i == 0) ? pMin : pMax;
+        }
+        inline Point2<T> &operator[](int i)
+        {
+            assert(i == 0 || i == 1);
+            return (i == 0) ? pMin : pMax;
+        }
+        bool operator==(const Bounds2<T> &b) const
+        {
+            return b.pMin == pMin && b.pMax == pMax;
+        }
+        bool operator!=(const Bounds2<T> &b) const
+        {
+            return b.pMin != pMin || b.pMax != pMax;
+        }
+        Point2<T> Lerp(const Point2f &t) const
+        {
+            return Point2<T>(reina::Lerp(t.x, pMin.x, pMax.x), reina::Lerp(t.y, pMin.y, pMax.y));
+        }
+        Vector2<T> Offset(const Point2<T> &p) const
+        {
+            Vector2<T> o = p - pMin;
+            if (pMax.x > pMin.x)
+                o.x /= pMax.x - pMin.x;
+            if (pMax.y > pMin.y)
+                o.y /= pMax.y - pMin.y;
+            return o;
+        }
+        void BoundingSphere(Point2<T> *c, Float *rad) const
+        {
+            *c = (pMin + pMax) / 2;
+            *rad = Inside(*c, *this) ? Distance(*c, pMax) : 0;
+        }
+
+        // Bounds2 Public Methods
+        Point2<T> pMin, pMax;
+    };
+
+    template <typename T>
+    class Bounds3
+    {
+    public:
+        // Bounds3 Public Methods
+        Bounds3()
+        {
+            T minNum = std::numeric_limits<T>::lowest();
+            T maxNum = std::numeric_limits<T>::max();
+            pMin = Point3<T>(maxNum, maxNum, maxNum);
+            pMax = Point3<T>(minNum, minNum, minNum);
+        }
+        Bounds3(const Point3<T> &p) : pMin(p), pMax(p) {}
+        Bounds3(const Point3<T> &p1, const Point3<T> &p2)
+            : pMin(std::min(p1.x, p2.x), std::min(p1.y, p2.y),
+                   std::min(p1.z, p2.z)),
+              pMax(std::max(p1.x, p2.x), std::max(p1.y, p2.y),
+                   std::max(p1.z, p2.z))
+        {
+        }
+        const Point3<T> &operator[](int i) const
+        {
+            assert(i == 0 || i == 1);
+            return (i == 0) ? pMin : pMax;
+        }
+        Point3<T> &operator[](int i)
+        {
+            assert(i == 0 || i == 1);
+            return (i == 0) ? pMin : pMax;
+        }
+        bool operator==(const Bounds3<T> &b) const
+        {
+            return b.pMin == pMin && b.pMax == pMax;
+        }
+        bool operator!=(const Bounds3<T> &b) const
+        {
+            return b.pMin != pMin || b.pMax != pMax;
+        }
+        Point3<T> Corner(int corner) const
+        {
+            return Point3<T>((*this)[(corner & 1)].x,
+                             (*this)[(corner & 2) ? 1 : 0].y,
+                             (*this)[(corner & 4) ? 1 : 0].z);
+        }
+        Vector3<T> Diagonal() const { return pMax - pMin; }
+        T SurfaceArea() const
+        {
+            Vector3<T> d = Diagonal();
+            return 2 * (d.x * d.y + d.x * d.z + d.y * d.z);
+        }
+        T Volume() const
+        {
+            Vector3<T> d = Diagonal();
+            return d.x * d.y * d.z;
+        }
+        int MaximumExtent() const
+        {
+            Vector3<T> d = Diagonal();
+            if (d.x > d.y && d.x > d.z)
+                return 0;
+            else if (d.y > d.z)
+                return 1;
+            else
+                return 2;
+        }
+        Point3<T> Lerp(const Point3f &t) const
+        {
+            return Point3<T>(reina::Lerp(t.x, pMin.x, pMax.x),
+                             reina::Lerp(t.y, pMin.y, pMax.y),
+                             reina::Lerp(t.z, pMin.z, pMax.z));
+        }
+        Vector3<T> Offset(const Point3<T> &p) const
+        {
+            Vector3<T> o = p - pMin;
+            if (pMax.x > pMin.x)
+                o.x /= pMax.x - pMin.x;
+            if (pMax.y > pMin.y)
+                o.y /= pMax.y - pMin.y;
+            if (pMax.z > pMin.z)
+                o.z /= pMax.z - pMin.z;
+            return o;
+        }
+        void BoundingSphere(Point3<T> *center, Float *radius) const
+        {
+            *center = (pMin + pMax) / 2;
+            *radius = Inside(*center, *this) ? Distance(*center, pMax) : 0;
+        }
+        template <typename U>
+        explicit operator Bounds3<U>() const
+        {
+            return Bounds3<U>((Point3<U>)pMin, (Point3<U>)pMax);
+        }
+        bool IntersectP(const Ray &ray, Float *hitt0 = nullptr, Float *hitt1 = nullptr) const
+        {
+            throw std::runtime_error("Bounds3::IntersectP not implemented");
+            return false;
+        }
+        inline bool IntersectP(const Ray &ray, const Vector3f &invDir,
+                               const int dirIsNeg[3]) const
+        {
+            throw std::runtime_error("Bounds3::IntersectP not implemented");
+            return false;
+        }
+
+        // Bounds3 Public Members
+        Point3<T> pMin, pMax;
+    };
+
 }
