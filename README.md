@@ -1,5 +1,7 @@
 # Reina Renderer
 
+[![CMake](https://github.com/SankHyan24/ReinaRender/actions/workflows/cmake.yml/badge.svg)](https://github.com/SankHyan24/ReinaRender/actions/workflows/cmake.yml)
+
 a simple renderer by @SankHyan24
 
 Linux Environment installation:
